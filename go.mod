@@ -4,6 +4,8 @@ go 1.20
 
 require (
 	github.com/gocolly/colly v1.2.0
+	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/sekimura/go-normalize-url v0.0.0-20150113070447-c2b8a31b72ab
 	github.com/spf13/cobra v1.8.0
 )
 
@@ -19,7 +21,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
-	github.com/sekimura/go-normalize-url v0.0.0-20150113070447-c2b8a31b72ab // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	golang.org/x/net v0.21.0 // indirect

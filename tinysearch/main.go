@@ -3,34 +3,38 @@ package tinysearch
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/url"
 	"time"
 
 	"github.com/gocolly/colly"
+	_ "github.com/mattn/go-sqlite3"
 	normalizeurl "github.com/sekimura/go-normalize-url"
 )
 
 func CreateCollector(db *sql.DB) *colly.Collector {
 	c := colly.NewCollector(
-		colly.MaxDepth(1),
-		colly.CacheDir("./cache"),
+		colly.MaxDepth(3),
+		colly.CacheDir(".cache/"),
+		colly.DisallowedDomains("*.microsoft.com", "*.facebook.com", "*.google.com"),
 	)
 
 	// Find and visit all links
-	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
-		e.Request.Visit(e.Attr("href"))
-	})
-
-	// Find and visit all links
 	c.OnHTML("body", func(element *colly.HTMLElement) {
-		url := NormalizeUrl(element.Request.URL)
+		url := element.Request.URL.String()
+		fmt.Println("visiting ", url)
 		content := element.Text
-
 		err := InsertPage(db, url, content)
 		if err != nil {
 			log.Printf("Failed to insert page %s: %s\n", url, err)
 		}
+	})
+
+	// Find and visit all links
+	c.OnHTML("a[href]", func(element *colly.HTMLElement) {
+		link := element.Attr("href")
+		c.Visit(element.Request.AbsoluteURL(link))
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
@@ -46,9 +50,8 @@ func CreateDbConnection(path string) *sql.DB {
 		log.Fatal(err)
 	}
 
-	db.SetConnMaxLifetime(0)
-	db.SetMaxIdleConns(3)
-	db.SetMaxOpenConns(3)
+	db.SetConnMaxLifetime(time.Duration(10))
+	db.SetMaxOpenConns(1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -70,6 +73,7 @@ func NormalizeUrl(url *url.URL) string {
 }
 
 func InsertPage(db *sql.DB, url string, content string) error {
+	fmt.Println(" - start inserting...", url)
 	// Open transaction
 	tx, err := db.Begin()
 	if err != nil {
@@ -77,7 +81,7 @@ func InsertPage(db *sql.DB, url string, content string) error {
 	}
 
 	//  Prepare statement
-	stmt, err := tx.Prepare("INSERT INTO page (url, content) values(?, ?)")
+	stmt, err := tx.Prepare("INSERT INTO pages (url, content) values(?, ?)")
 	if err != nil {
 		return err
 	}
@@ -89,11 +93,18 @@ func InsertPage(db *sql.DB, url string, content string) error {
 		return err
 	}
 
+	// Finish transaction
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(" - finish inserting...", url)
 	return nil
 }
 
 func Index(seeds []string) {
-	db := CreateDbConnection("dev.db")
+	db := CreateDbConnection("data/dev.db")
 	collector := CreateCollector(db)
 
 	for _, seed := range seeds {

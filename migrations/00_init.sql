@@ -1,3 +1,4 @@
+PRAGMA journal_mode=WAL;
 
 CREATE TABLE pages (
     id         INTEGER    NOT NULL    PRIMARY KEY,

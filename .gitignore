@@ -25,3 +25,4 @@ go.work
 
 # Sqlite db
 **.db
+data/**
